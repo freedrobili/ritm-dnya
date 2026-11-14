@@ -6,7 +6,7 @@ cd "$SCRIPT_DIR"
 export DEVELOPER_DIR="${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}"
 
 swift build -c release
-APP="$SCRIPT_DIR/build/Планер.app"
+APP="$SCRIPT_DIR/build/Ритм дня.app"
 CONTENTS="$APP/Contents"
 RESOURCES="$CONTENTS/Resources"
 ICONSET="$SCRIPT_DIR/build/Planer.iconset"
@@ -42,7 +42,7 @@ cat > "$CONTENTS/Info.plist" <<'PLIST'
     <key>CFBundleExecutable</key><string>Planer</string>
     <key>CFBundleIconFile</key><string>Planer</string>
     <key>CFBundleIdentifier</key><string>ru.local.planer</string>
-    <key>CFBundleName</key><string>Планер</string>
+    <key>CFBundleName</key><string>Ритм дня</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>LSMinimumSystemVersion</key><string>14.0</string>
     <key>NSHighResolutionCapable</key><true/>
