@@ -6,7 +6,7 @@ import UniformTypeIdentifiers
 
 struct ContentView: View {
     @Environment(\.modelContext) private var context
-    @AppStorage("planner.theme") private var theme = "system"
+    @AppStorage("planner.theme") private var theme = "custom"
     @AppStorage("planner.accent") private var accent = "blue"
     @AppStorage("planner.textSize") private var textSize = "m"
     @AppStorage("planner.font") private var fontName = "system"
@@ -14,11 +14,12 @@ struct ContentView: View {
     @State private var section: PlannerSection? = .planner
     @State private var showingImport = false
     @State private var message: String?
-    @AppStorage("planner.referenceThemeApplied") private var referenceThemeApplied = false
+    private var palette: RhythmPalette { RhythmPalette(theme: theme, accent: accent, surface: "paper") }
+
     var body: some View {
         HStack(spacing: 0) {
             VStack(alignment: .leading, spacing: 6) {
-                Text("ПЛАНЕР").font(.caption.weight(.medium)).foregroundStyle(Rhythm.muted).padding(.horizontal, 22).padding(.top, 24).padding(.bottom, 8)
+                Text("ПЛАНЕР").font(.caption.weight(.medium)).foregroundStyle(palette.muted).padding(.horizontal, 22).padding(.top, 24).padding(.bottom, 8)
                 sidebarButton("Сегодня", symbol: "calendar", section: .planner)
                 sidebarButton("Неделя", symbol: "calendar.day.timeline.left", section: .planner)
                 sidebarButton("Пары", symbol: PlannerIcon.lesson, section: .classes)
@@ -28,12 +29,12 @@ struct ContentView: View {
                 Spacer()
                 sidebarButton("Оформление", symbol: "gearshape", section: .appearance)
                 Button { showingImport = true } label: { Label("Перенести данные", systemImage: "square.and.arrow.down").font(.caption) }
-                    .buttonStyle(.plain).foregroundStyle(Rhythm.muted).padding(.horizontal, 24).padding(.bottom, 20)
+                    .buttonStyle(.plain).foregroundStyle(palette.muted).padding(.horizontal, 24).padding(.bottom, 20)
             }
             .frame(width: 220)
             .frame(maxHeight: .infinity, alignment: .topLeading)
-            .background(Rhythm.sidebar)
-            Rectangle().fill(Rhythm.line).frame(width: 1)
+            .background(palette.sidebar)
+            Rectangle().fill(palette.line).frame(width: 1)
             Group {
                 switch section ?? .planner {
                 case .planner: PlannerView()
@@ -47,8 +48,9 @@ struct ContentView: View {
             .frame(maxWidth: pageWidth == "narrow" ? 1250 : (pageWidth == "wide" ? 1900 : 1580), maxHeight: .infinity)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .background(Rhythm.background)
-        .onAppear { if !referenceThemeApplied { theme = "dark"; referenceThemeApplied = true } }
+        .background(palette.background)
+        .foregroundStyle(palette.foreground)
+        .onAppear { if theme == "system" { theme = "custom" } }
         .fileImporter(isPresented: $showingImport, allowedContentTypes: [.data, .item], allowsMultipleSelection: false) { result in
             do {
                 guard let url = try result.get().first else { return }
@@ -57,10 +59,10 @@ struct ContentView: View {
                 message = "Перенесено: задач — \(summary.tasks), пар — \(summary.classes), людей — \(summary.people), привычек — \(summary.habits), тегов — \(summary.tags)."
             } catch { message = error.localizedDescription }
         }
-        .tint(Rhythm.accent)
+        .tint(palette.accent)
         .environment(\.dynamicTypeSize, textSize == "s" ? .small : (textSize == "l" ? .large : .medium))
         .environment(\.font, .system(.body, design: fontName == "classic" ? .serif : (fontName == "rounded" ? .rounded : (fontName == "mono" ? .monospaced : .default))))
-        .preferredColorScheme(theme == "system" ? nil : (theme == "dark" ? .dark : .light))
+        .preferredColorScheme(theme == "light" ? .light : .dark)
         .alert("Перенос данных", isPresented: Binding(get: { message != nil }, set: { if !$0 { message = nil } })) {
             Button("Хорошо") { message = nil }
         } message: { Text(message ?? "") }
@@ -72,7 +74,7 @@ struct ContentView: View {
                 .font(.system(size: 16))
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 16).padding(.vertical, 11)
-                .background(section == target && (target != .planner || title == "Сегодня") ? Rhythm.selected : .clear, in: RoundedRectangle(cornerRadius: 11))
+                .background(section == target && (target != .planner || title == "Сегодня") ? palette.selected : .clear, in: RoundedRectangle(cornerRadius: 11))
         }
         .buttonStyle(.plain)
         .padding(.horizontal, 12)
@@ -84,14 +86,39 @@ private extension Notification.Name {
     static let plannerShowWeek = Notification.Name("plannerShowWeek")
 }
 
-private enum Rhythm {
-    static let background = Color(red: 0.105, green: 0.095, blue: 0.12)
-    static let sidebar = Color(red: 0.14, green: 0.125, blue: 0.16)
-    static let card = Color(red: 0.19, green: 0.175, blue: 0.21)
-    static let selected = Color(red: 0.35, green: 0.29, blue: 0.41)
-    static let accent = Color(red: 0.81, green: 0.68, blue: 0.96)
-    static let muted = Color(red: 0.72, green: 0.69, blue: 0.75)
-    static let line = Color.white.opacity(0.13)
+struct RhythmPalette {
+    let background: Color
+    let sidebar: Color
+    let card: Color
+    let selected: Color
+    let accent: Color
+    let muted: Color
+    let line: Color
+    let foreground: Color
+    let onAccent: Color
+
+    init(theme: String, accent: String, surface: String) {
+        let isLight = theme == "light"
+        let isCustom = theme == "custom" || theme == "system"
+        self.background = isLight ? Color(hex: "F7F5F8") : (isCustom ? Color(hex: "1B181F") : Color(hex: "17191E"))
+        self.sidebar = isLight ? Color(hex: "EFEBF2") : (isCustom ? Color(hex: "242029") : Color(hex: "20232A"))
+        let baseCard = isLight ? Color(hex: "FFFFFF") : (isCustom ? Color(hex: "312D36") : Color(hex: "2A2D35"))
+        self.card = switch surface {
+        case "warm": isLight ? Color(hex: "FBF3EB") : Color(hex: "3A302F")
+        case "sage": isLight ? Color(hex: "EDF5EF") : Color(hex: "2C3833")
+        case "sky": isLight ? Color(hex: "EDF3FA") : Color(hex: "2B3440")
+        case "white": isLight ? Color.white : Color(hex: "303239")
+        default: baseCard
+        }
+        self.selected = isLight ? Color(hex: "E4D8EE") : (isCustom ? Color(hex: "594A68") : Color(hex: "3B4150"))
+        self.accent = isCustom && accent == "blue" ? Color(hex: "CFACEF") : (!isLight && accent == "amber" ? Color(hex: "D9A960") : PlannerPalette.color(accent))
+        self.muted = isLight ? Color(hex: "615B68") : Color(hex: "BBB4C0")
+        self.line = isLight ? Color.black.opacity(0.13) : Color.white.opacity(0.16)
+        self.foreground = isLight ? Color(hex: "25212B") : Color.white
+        let accentColor = NSColor(self.accent).usingColorSpace(.deviceRGB) ?? NSColor.systemBlue
+        let brightness = 0.2126 * accentColor.redComponent + 0.7152 * accentColor.greenComponent + 0.0722 * accentColor.blueComponent
+        self.onAccent = brightness < 0.47 ? Color.white : Color.black
+    }
 }
 
 
@@ -132,6 +159,9 @@ struct PlannerView: View {
     private var overlayTasks: [PlannerTask] { guard let overlayPersonID else { return [] }; return allTasks.filter { $0.deletedAt == nil && $0.personID == overlayPersonID && (selectedTagID == nil || $0.tagIDs.contains(selectedTagID!)) } }
     private var selectedPersonName: String { selectedPersonID.flatMap { id in people.first { $0.id == id }?.name } ?? "Я" }
     private var overlayPerson: PlannerPerson? { people.first { $0.id == overlayPersonID } }
+    @AppStorage("planner.theme") private var theme = "custom"
+    @AppStorage("planner.accent") private var accent = "blue"
+    private var palette: RhythmPalette { RhythmPalette(theme: theme, accent: accent, surface: surface) }
     private var hasInvalidComposerTime: Bool { composerHasTime && clockText(composerEnd) <= clockText(composerStart) }
 
     var body: some View {
@@ -139,8 +169,8 @@ struct PlannerView: View {
             header
             if weekMode { weekGrid } else { dayContent }
         }
-        .background(Rhythm.background)
-        .foregroundStyle(Color.white)
+        .background(palette.background)
+        .foregroundStyle(palette.foreground)
         .onReceive(NotificationCenter.default.publisher(for: .plannerShowToday)) { _ in date = .now.plannerDay; weekMode = false }
         .onReceive(NotificationCenter.default.publisher(for: .plannerShowWeek)) { _ in weekMode = true }
         .sheet(isPresented: $addingTask) { TaskEditor(task: nil, date: date, personID: selectedPersonID, tags: tags) }
@@ -154,13 +184,13 @@ struct PlannerView: View {
             HStack(alignment: .firstTextBaseline, spacing: 18) {
                 Text(weekMode ? "Неделя" : (date == .now.plannerDay ? "Сегодня" : date.formatted(.dateTime.locale(Locale(identifier: "ru_RU")).weekday(.wide)).capitalized))
                     .font(.system(size: 40, weight: .bold))
-                Rectangle().fill(Rhythm.line).frame(width: 1, height: 30)
+                Rectangle().fill(palette.line).frame(width: 1, height: 30)
                 Text(date.formatted(.dateTime.locale(Locale(identifier: "ru_RU")).day().month(.wide).weekday(.wide)))
-                    .font(.title3).foregroundStyle(Rhythm.muted)
+                    .font(.title3).foregroundStyle(palette.muted)
                 Spacer()
                 let current = visibleTasks.filter { $0.day == date.plannerDay }
                 Text("\(current.filter(\.isDone).count) из \(current.count) выполнено")
-                    .font(.subheadline).foregroundStyle(Rhythm.muted)
+                    .font(.subheadline).foregroundStyle(palette.muted)
             }
             HStack(spacing: 12) {
                 Menu {
@@ -206,8 +236,8 @@ struct PlannerView: View {
                         Text(day.formatted(.dateTime.day())).font(.title2.weight(.semibold))
                     }
                     .frame(maxWidth: .infinity).padding(.vertical, 10)
-                    .foregroundStyle(day == date.plannerDay ? Color.black : Rhythm.muted)
-                    .background(day == date.plannerDay ? Rhythm.accent : .clear, in: RoundedRectangle(cornerRadius: 13))
+                    .foregroundStyle(day == date.plannerDay ? palette.onAccent : palette.muted)
+                    .background(day == date.plannerDay ? palette.accent : .clear, in: RoundedRectangle(cornerRadius: 13))
                 }.buttonStyle(.plain)
             }
         }
@@ -233,26 +263,26 @@ struct PlannerView: View {
                         } label: { Text(selectedTagID.flatMap { id in tags.first { $0.id == id }?.name } ?? "Все").font(.subheadline) }
                     }
                     if dayTasks.isEmpty && dayOverlayTasks.isEmpty {
-                        Text("Задач пока нет. Добавьте первую выше.").foregroundStyle(Rhythm.muted)
+                        Text("Задач пока нет. Добавьте первую выше.").foregroundStyle(palette.muted)
                     }
                     ForEach((dayTasks + dayOverlayTasks).sorted { ($0.isDone ? 1 : 0, $0.startsAt ?? "99:99") < ($1.isDone ? 1 : 0, $1.startsAt ?? "99:99") }) { task in
                         taskRow(task, isOverlay: task.personID != selectedPersonID)
-                        Rectangle().fill(Rhythm.line).frame(height: 1)
+                        Rectangle().fill(palette.line).frame(height: 1)
                     }
                 }
                 .padding(.horizontal, 30).padding(.bottom, 30)
             }
             .frame(minWidth: 430, maxWidth: .infinity, maxHeight: .infinity)
-            Rectangle().fill(Rhythm.line).frame(width: 1)
+            Rectangle().fill(palette.line).frame(width: 1)
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
                     Text("Ритм дня").font(.title2.bold())
                     Spacer()
                     Button { exportSchedule() } label: { Image(systemName: "square.and.arrow.up") }.accessibilityLabel("Экспорт")
                 }
-                Text(date.formatted(.dateTime.locale(Locale(identifier: "ru_RU")).weekday(.wide)).capitalized).foregroundStyle(Rhythm.muted)
+                Text(date.formatted(.dateTime.locale(Locale(identifier: "ru_RU")).weekday(.wide)).capitalized).foregroundStyle(palette.muted)
                 if overlayPersonID != nil {
-                    Text("Свободно вместе: \(commonFreeSlots(on: date).joined(separator: " · "))").font(.caption).foregroundStyle(Rhythm.muted)
+                    Text("Свободно вместе: \(commonFreeSlots(on: date).joined(separator: " · "))").font(.caption).foregroundStyle(palette.muted)
                 }
                 timeline(entries: entries).padding(.top, 20)
             }
@@ -269,9 +299,9 @@ struct PlannerView: View {
                 ForEach(firstHour...lastHour, id: \.self) { hour in
                     HStack(alignment: .top, spacing: 18) {
                         Text(String(format: "%02d:00", hour))
-                            .font(.subheadline).foregroundStyle(Rhythm.muted)
+                            .font(.subheadline).foregroundStyle(palette.muted)
                             .frame(width: 54, alignment: .trailing)
-                        Rectangle().fill(Rhythm.line).frame(width: 1)
+                        Rectangle().fill(palette.line).frame(width: 1)
                         VStack(spacing: 6) {
                             ForEach(entries.filter { clockMinutes($0.time) / 60 == hour }) { entry in
                                 timelineEvent(entry)
@@ -288,13 +318,13 @@ struct PlannerView: View {
             Image(systemName: entry.lesson == nil ? (entry.task?.icon ?? PlannerIcon.taskDefault) : PlannerIcon.lesson)
             VStack(alignment: .leading, spacing: 3) {
                 Text(entry.task?.title ?? entry.lesson?.subject ?? "").font(.subheadline.weight(.medium)).lineLimit(2)
-                Text("\(entry.time)–\(entry.task?.endsAt ?? entry.lesson?.endsAt ?? "")").font(.caption).foregroundStyle(Rhythm.muted)
+                Text("\(entry.time)–\(entry.task?.endsAt ?? entry.lesson?.endsAt ?? "")").font(.caption).foregroundStyle(palette.muted)
             }
             Spacer(minLength: 0)
         }
         .padding(10)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Rhythm.card, in: RoundedRectangle(cornerRadius: 11))
+        .background(palette.card, in: RoundedRectangle(cornerRadius: 11))
     }
 
     private var taskComposer: some View {
@@ -302,8 +332,8 @@ struct PlannerView: View {
             Text("Новая задача").font(.headline)
             TextField("Что нужно сделать?", text: $composerTitle)
                 .font(.title3).textFieldStyle(.plain).focused($isComposerTitleFocused)
-                .padding(12).background(Rhythm.card, in: RoundedRectangle(cornerRadius: 10))
-                .overlay(RoundedRectangle(cornerRadius: 10).stroke(Rhythm.accent.opacity(0.5)))
+                .padding(12).background(palette.card, in: RoundedRectangle(cornerRadius: 10))
+                .overlay(RoundedRectangle(cornerRadius: 10).stroke(palette.accent.opacity(0.5)))
                 .onSubmit(addComposedTask)
             HStack(spacing: 8) {
                 ForEach(tags.prefix(4)) { tag in
@@ -312,24 +342,24 @@ struct PlannerView: View {
                     } label: {
                         Label(tag.name, systemImage: composerTagIDs.contains(tag.id) ? "checkmark" : (tag.icon ?? PlannerIcon.tagDefault))
                             .font(.subheadline).padding(.horizontal, 12).padding(.vertical, 7)
-                            .background(composerTagIDs.contains(tag.id) ? Rhythm.accent : Rhythm.card, in: RoundedRectangle(cornerRadius: 10))
-                            .foregroundStyle(composerTagIDs.contains(tag.id) ? Color.black : Color.white)
+                            .background(composerTagIDs.contains(tag.id) ? palette.accent : palette.card, in: RoundedRectangle(cornerRadius: 10))
+                            .foregroundStyle(composerTagIDs.contains(tag.id) ? palette.onAccent : palette.foreground)
                     }.buttonStyle(.plain)
                 }
                 Menu { ForEach(tags) { tag in Button(tag.name) { if !composerTagIDs.insert(tag.id).inserted { composerTagIDs.remove(tag.id) } } }; Button("Управлять тегами") { showingTagEditor = true } } label: {
-                    Label("Тег", systemImage: "plus").font(.subheadline).padding(7).background(Rhythm.card, in: RoundedRectangle(cornerRadius: 10))
+                    Label("Тег", systemImage: "plus").font(.subheadline).padding(7).background(palette.card, in: RoundedRectangle(cornerRadius: 10))
                 }.buttonStyle(.plain)
             }
-            Rectangle().fill(Rhythm.line).frame(height: 1)
+            Rectangle().fill(palette.line).frame(height: 1)
             HStack {
                 Toggle("По времени", isOn: $composerHasTime).toggleStyle(.checkbox)
                 if composerHasTime {
                     DatePicker("С", selection: $composerStart, displayedComponents: .hourAndMinute).labelsHidden()
                     DatePicker("До", selection: $composerEnd, displayedComponents: .hourAndMinute).labelsHidden()
-                } else { Text("Без времени").foregroundStyle(Rhythm.muted) }
+                } else { Text("Без времени").foregroundStyle(palette.muted) }
                 Spacer()
                 Button("Добавить ↵", action: addComposedTask)
-                    .buttonStyle(.borderedProminent).tint(Rhythm.accent).foregroundStyle(.black)
+                    .buttonStyle(.borderedProminent).tint(palette.accent).foregroundStyle(palette.onAccent)
                     .disabled(composerTitle.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || hasInvalidComposerTime)
             }
             if hasInvalidComposerTime { Text("Конец должен быть позже начала").font(.caption).foregroundStyle(.red) }
@@ -340,10 +370,10 @@ struct PlannerView: View {
                     TextField("Заметка", text: $composerDetails).textFieldStyle(.roundedBorder)
                     HStack { TextField("Быстрый ввод", text: $quickText).onSubmit(addQuickTask); Button("Добавить", action: addQuickTask) }
                 }.padding(.top, 8)
-            }.font(.caption).foregroundStyle(Rhythm.muted)
+            }.font(.caption).foregroundStyle(palette.muted)
         }
         .padding(20)
-        .background(Rhythm.card.opacity(0.65), in: RoundedRectangle(cornerRadius: 15))
+        .background(palette.card.opacity(0.65), in: RoundedRectangle(cornerRadius: 15))
         .onAppear(perform: setCurrentComposerTime)
     }
 
@@ -379,12 +409,12 @@ struct PlannerView: View {
 
     @ViewBuilder private func taskRow(_ task: PlannerTask, isOverlay: Bool = false) -> some View {
         HStack(spacing: 14) {
-            Button { task.isDone.toggle(); save() } label: { Image(systemName: task.isDone ? "checkmark.circle.fill" : "circle").font(.title2).foregroundStyle(task.isDone ? Rhythm.accent : .white) }
+            Button { task.isDone.toggle(); save() } label: { Image(systemName: task.isDone ? "checkmark.circle.fill" : "circle").font(.title2).foregroundStyle(task.isDone ? palette.accent : palette.foreground) }
                 .buttonStyle(.plain)
                 .disabled(isOverlay)
                 .accessibilityLabel(task.isDone ? "Отметить невыполненной: \(task.title)" : "Отметить выполненной: \(task.title)")
             VStack(alignment: .leading, spacing: 4) {
-                Text(task.title).font(.system(size: 17)).strikethrough(task.isDone).foregroundStyle(task.isDone ? Rhythm.muted : .white).lineLimit(2)
+                Text(task.title).font(.system(size: 17)).strikethrough(task.isDone).foregroundStyle(task.isDone ? palette.muted : palette.foreground).lineLimit(2)
                 HStack(spacing: 5) {
                     if let time = task.startsAt { Text(time + (task.endsAt.map { "–\($0)" } ?? "") + " · " + duration(task)).monospacedDigit() }
                     if isConflicting(task) { Label("Конфликт", systemImage: "exclamationmark.triangle.fill").foregroundStyle(.orange) }
@@ -398,7 +428,7 @@ struct PlannerView: View {
                                 .background(PlannerPalette.color(tag.color).opacity(0.14), in: Capsule())
                         }
                     }
-                }.font(.caption).foregroundStyle(Rhythm.muted).lineLimit(1)
+                }.font(.caption).foregroundStyle(palette.muted).lineLimit(1)
             }.contentShape(Rectangle()).onTapGesture { if !isOverlay { editingTask = task } }
             Spacer(minLength: 2)
             if !isOverlay { Button { delete(task) } label: { Image(systemName: "trash").foregroundStyle(.tertiary) }.buttonStyle(.plain).accessibilityLabel("Удалить задачу: \(task.title)") }

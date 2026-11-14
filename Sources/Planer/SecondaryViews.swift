@@ -248,7 +248,7 @@ struct StatisticsView: View {
 }
 
 struct AppearanceView: View {
-    @AppStorage("planner.theme") private var theme = "system"
+    @AppStorage("planner.theme") private var theme = "custom"
     @AppStorage("planner.accent") private var accent = "blue"
     @AppStorage("planner.surface") private var surface = "paper"
     @AppStorage("planner.font") private var font = "system"
@@ -264,9 +264,9 @@ struct AppearanceView: View {
         VStack(alignment: .leading, spacing: 22) {
             Text("Оформление").font(.largeTitle.bold())
             Text("Настройте тему и акцентный цвет приложения.").foregroundStyle(.secondary)
-            GroupBox("Тема") { Picker("Тема", selection: $theme) { Text("Системная").tag("system"); Text("Светлая").tag("light"); Text("Тёмная").tag("dark") }.pickerStyle(.segmented).padding(8) }
-            GroupBox("Основной цвет") { LazyVGrid(columns: [GridItem(.adaptive(minimum: 115))], spacing: 10) { ForEach(Array(PlannerPalette.colors.keys.sorted()), id: \.self) { key in Button { accent = key } label: { HStack { Circle().fill(PlannerPalette.color(key)).frame(width: 14, height: 14); Text(key.capitalized); if accent == key { Image(systemName: "checkmark") } }.frame(maxWidth: .infinity, alignment: .leading).padding(9).background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 8)) }.buttonStyle(.plain) } }.padding(8) }
-            GroupBox("Свой цвет акцента") { ColorPicker("Выбрать цвет", selection: Binding(get: { PlannerPalette.color(accent) }, set: { accent = $0.hexString }), supportsOpacity: false).padding(8) }
+            GroupBox("Тема") { Picker("Тема", selection: $theme) { Text("Светлая").tag("light"); Text("Тёмная").tag("dark"); Text("Кастомная").tag("custom") }.pickerStyle(.segmented).padding(8) }
+            GroupBox("Основной цвет") { LazyVGrid(columns: [GridItem(.adaptive(minimum: 115))], spacing: 10) { ForEach(Array(PlannerPalette.colors.keys.sorted()), id: \.self) { key in Button { accent = key } label: { HStack { Circle().fill(RhythmPalette(theme: theme, accent: key, surface: surface).accent).frame(width: 14, height: 14); Text(key.capitalized); if accent == key { Image(systemName: "checkmark") } }.frame(maxWidth: .infinity, alignment: .leading).padding(9).background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 8)) }.buttonStyle(.plain) } }.padding(8) }
+            GroupBox("Свой цвет акцента") { ColorPicker("Выбрать цвет", selection: Binding(get: { RhythmPalette(theme: theme, accent: accent, surface: surface).accent }, set: { accent = $0.hexString }), supportsOpacity: false).padding(8) }
             GroupBox("Фон карточек") { Picker("Палитра", selection: $surface) { Text("Бумага").tag("paper"); Text("Чистый").tag("white"); Text("Тёплый").tag("warm"); Text("Шалфей").tag("sage"); Text("Небо").tag("sky") }.pickerStyle(.segmented).padding(8) }
             GroupBox("Шрифт и размеры") { VStack(alignment: .leading, spacing: 10) { Picker("Стиль текста", selection: $font) { Text("Системный").tag("system"); Text("Книжный").tag("classic"); Text("Мягкий").tag("rounded"); Text("Моно").tag("mono"); Text("Строгий").tag("strict") }; Picker("Размер", selection: $textSize) { Text("Меньше").tag("s"); Text("Обычный").tag("m"); Text("Крупнее").tag("l") }.pickerStyle(.segmented) }.padding(8) }
             GroupBox("Ширина страницы") { Picker("Макет", selection: $width) { Text("Узкий").tag("narrow"); Text("Обычный").tag("normal"); Text("Широкий").tag("wide") }.pickerStyle(.segmented).padding(8) }
@@ -274,7 +274,7 @@ struct AppearanceView: View {
             GroupBox("Цвет пар") { ColorPicker("Выбрать цвет", selection: Binding(get: { PlannerPalette.color(lessonColor) }, set: { lessonColor = $0.hexString }), supportsOpacity: false).padding(8) }
             GroupBox("Плотность и скругление") { VStack(alignment: .leading, spacing: 10) { Picker("Расположение", selection: $density) { Text("Компактно").tag("compact"); Text("Обычно").tag("comfortable"); Text("Просторно").tag("spacious") }.pickerStyle(.segmented); HStack { Text("Скругление карточек"); Slider(value: $corner, in: 6...22, step: 1); Text("\(Int(corner)) pt").monospacedDigit() } }.padding(8) }
         }.padding(24).frame(maxWidth: 700, alignment: .leading)
-        }.tint(PlannerPalette.color(accent)).preferredColorScheme(theme == "system" ? nil : (theme == "dark" ? .dark : .light))
+        }
     }
 }
 
