@@ -95,15 +95,30 @@ import SwiftUI
 }
 
 enum PlannerSection: String, CaseIterable, Identifiable {
-    case planner = "Планер", classes = "Пары", people = "Люди", habits = "Привычки", statistics = "Статистика", appearance = "Оформление"
+    case planner = "Планер", tasks = "Задачи", classes = "Пары", people = "Люди", habits = "Привычки", statistics = "Статистика", appearance = "Оформление"
     var id: String { rawValue }
-    var symbol: String { switch self { case .planner: "calendar.day.timeline.left"; case .classes: PlannerIcon.lesson; case .people: "person.2"; case .habits: "checkmark.circle"; case .statistics: "chart.bar"; case .appearance: "paintpalette" } }
+    var symbol: String { switch self { case .planner: "calendar.day.timeline.left"; case .tasks: "checklist"; case .classes: PlannerIcon.lesson; case .people: "person.2"; case .habits: "checkmark.circle"; case .statistics: "chart.bar"; case .appearance: "paintpalette" } }
 }
 
 enum PlannerPalette {
     static let colors: [String: Color] = [
         "blue": Color(hex: "4B8DD8"), "green": Color(hex: "469A79"), "red": Color(hex: "D56C69"), "purple": Color(hex: "9072C2"), "orange": Color(hex: "D8894B"), "pink": Color(hex: "CB74A1"), "teal": Color(hex: "409E9C"), "gray": Color(hex: "89919D"), "amber": Color(hex: "92621F")
     ]
+    static func label(for key: String) -> String {
+        switch key {
+        case "amber": "Янтарный"
+        case "blue": "Синий"
+        case "gray": "Серый"
+        case "green": "Зелёный"
+        case "orange": "Оранжевый"
+        case "pink": "Розовый"
+        case "purple": "Фиолетовый"
+        case "red": "Красный"
+        case "teal": "Бирюзовый"
+        default: key
+        }
+    }
+
     static func color(_ key: String) -> Color { if colors[key] != nil { return colors[key]! }; if key.count == 6 || key.count == 7 { return Color(hex: key) }; return colors["blue"]! }
 }
 
@@ -141,8 +156,11 @@ enum PlannerIcon {
 
 extension Color {
     var hexString: String {
-        let color = NSColor(self).usingColorSpace(.deviceRGB) ?? NSColor.systemBlue
-        return String(format: "#%02X%02X%02X", Int(color.redComponent * 255), Int(color.greenComponent * 255), Int(color.blueComponent * 255))
+        let color = NSColor(self).usingColorSpace(.sRGB) ?? NSColor(srgbRed: 0.29, green: 0.55, blue: 0.85, alpha: 1)
+        func byte(_ component: CGFloat) -> Int {
+            Int((min(max(component, 0), 1) * 255).rounded())
+        }
+        return String(format: "#%02X%02X%02X", byte(color.redComponent), byte(color.greenComponent), byte(color.blueComponent))
     }
     init(hex: String) {
         let value = UInt64(hex.trimmingCharacters(in: CharacterSet(charactersIn: "#")), radix: 16) ?? 0
