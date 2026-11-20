@@ -14,6 +14,7 @@ struct ContentView: View {
     @State private var section: PlannerSection? = .planner
     @State private var showingImport = false
     @State private var message: String?
+    @AppStorage("planner.weekMode") private var weekMode = false
     private var palette: RhythmPalette { RhythmPalette(theme: theme, accent: accent, surface: "paper") }
 
     var body: some View {
@@ -69,12 +70,12 @@ struct ContentView: View {
     }
 
     private func sidebarButton(_ title: String, symbol: String, section target: PlannerSection) -> some View {
-        Button { section = target; if title == "Сегодня" { NotificationCenter.default.post(name: .plannerShowToday, object: nil) }; if title == "Неделя" { NotificationCenter.default.post(name: .plannerShowWeek, object: nil) } } label: {
+        Button { section = target; if title == "Сегодня" { weekMode = false; NotificationCenter.default.post(name: .plannerShowToday, object: nil) }; if title == "Неделя" { weekMode = true; NotificationCenter.default.post(name: .plannerShowWeek, object: nil) } } label: {
             Label(title, systemImage: symbol)
                 .font(.system(size: 16))
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 16).padding(.vertical, 11)
-                .background(section == target && (target != .planner || title == "Сегодня") ? palette.selected : .clear, in: RoundedRectangle(cornerRadius: 11))
+                .background(section == target && (target != .planner || (title == "Неделя" ? weekMode : !weekMode)) ? palette.selected : .clear, in: RoundedRectangle(cornerRadius: 11))
         }
         .buttonStyle(.plain)
         .padding(.horizontal, 12)
@@ -130,7 +131,7 @@ struct PlannerView: View {
     @Query(sort: \PlannerPerson.position) private var people: [PlannerPerson]
     @Query private var settings: [PlannerSetting]
     @State private var date = Date.now.plannerDay
-    @State private var weekMode = false
+    @AppStorage("planner.weekMode") private var weekMode = false
     @State private var selectedPersonID: UUID?
     @State private var overlayPersonID: UUID?
     @State private var selectedTagID: UUID?
